@@ -1,0 +1,18 @@
+{
+  "name": "credpal-node-app",
+  "version": "1.0.0",
+  "description": "CredPal DevOps assessment Node.js application",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "Justus Dahunsi",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5"
+  }
+}
