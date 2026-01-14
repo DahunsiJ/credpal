@@ -16,7 +16,7 @@ The application exposes the following endpoints on port `3000`:
 
 ## Folder Structure
 
-\`\`\`
+
 credpal/
 │
 ├── app/
@@ -55,7 +55,7 @@ credpal/
 ├── .gitignore
 ├── README.md
 └── Makefile
-\`\`\`
+
 
 ---
 
