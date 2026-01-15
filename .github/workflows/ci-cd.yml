@@ -34,10 +34,10 @@ jobs:
           format: table
           vuln-type: os,library
           severity: HIGH,CRITICAL
-          exit-code: 0   # Non-blocking scan
+          exit-code: 0
 
   # ===============================
-  # 2️⃣ Run Tests & Docker Compose
+  # 2️⃣ Run Unit Tests
   # ===============================
   test:
     name: Run Unit Tests and Local Compose
@@ -60,7 +60,7 @@ jobs:
         run: |
           docker compose -f docker/docker-compose.yml up -d --build
           echo "Waiting for app to be ready..."
-          # Wait until app container is listening on port 3000
+
           for i in $(seq 1 20); do
             if docker exec credpal_app nc -z 127.0.0.1 3000; then
               echo "✅ App is ready!"
@@ -69,7 +69,7 @@ jobs:
             echo "⏳ Waiting 3s..."
             sleep 3
           done
-          # Final check: fail if still not ready
+
           if ! docker exec credpal_app nc -z 127.0.0.1 3000; then
             echo "❌ App failed to start on port 3000"
             docker compose -f docker/docker-compose.yml logs
@@ -79,10 +79,6 @@ jobs:
       - name: Run unit tests
         run: npm test
         working-directory: app
-
-      - name: Display container logs (optional)
-        run: docker compose -f docker/docker-compose.yml logs --tail=50
-        continue-on-error: true
 
       - name: Tear down Docker Compose
         run: docker compose -f docker/docker-compose.yml down
@@ -99,6 +95,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # ✅ FORCE LOWERCASE OWNER
+      - name: Set lowercase repo owner
+        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -112,7 +112,7 @@ jobs:
           context: .
           file: docker/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/credpal-node-app:latest
+          tags: ghcr.io/${{ env.OWNER_LC }}/credpal-node-app:latest
 
   # ===============================
   # 4️⃣ Manual Approval
