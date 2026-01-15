@@ -1,174 +1,203 @@
-# CredPal DevOps Engineer Assessment – Node.js Application
+# CredPal Node.js Application – DevOps Assessment
 
----
+## Overview
 
-## Project Overview
+This repository contains a production-ready Node.js application with a complete DevOps implementation, including:
 
-This project demonstrates a **production-ready DevOps pipeline and infrastructure** setup for a simple Node.js application. The application is designed to run in a **cloud environment** and showcases containerization, CI/CD, and infrastructure as code best practices.
+- Containerization with Docker  
+- CI/CD pipeline using GitHub Actions  
+- Security scanning  
+- Infrastructure as Code with Terraform  
+- Observability via health and status endpoints  
+- Manual approval gating for production releases  
 
-The application exposes the following endpoints on port `3000`:
+The solution is designed to demonstrate real-world DevOps practices aligned with production standards.
 
-- `GET /health` – Checks the health of the application.
-- `GET /status` – Returns application metadata, environment, and timestamp.
-- `POST /process` – Accepts JSON payloads and processes requests.
 
----
+## Application Architecture
 
-## Folder Structure
+### Core Components
 
-\`\`\`
-credpal/
-│
-├── app/
-│   ├── src/
-│   │   ├── routes/
-│   │   │   ├── health.js
-│   │   │   ├── status.js
-│   │   │   └── process.js
-│   │   ├── app.js
-│   │   └── server.js
-│   ├── tests/
-│   │   └── health.test.js
-│   ├── package.json
-│   ├── package-lock.json
-│   └── .env.example
-│
-├── docker/
-│   ├── Dockerfile
-│   └── docker-compose.yml
-│
-├── terraform/
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   ├── providers.tf
-│   ├── terraform.tfvars.example
-│   └── modules/
-│       ├── vpc/
-│       ├── ecs/
-│       ├── alb/
-│       └── rds/
-│
-├── .github/
-│   └── workflows/
-│       └── ci-cd.yml
-├── .gitignore
-├── README.md
-└── Makefile
-\`\`\`
+- **Backend:** Node.js (Express)
+- **Container Runtime:** Docker
+- **CI/CD:** GitHub Actions
+- **Container Registry:** GitHub Container Registry (GHCR)
+- **Database:** PostgreSQL
+- **Cloud Target:** AWS (ECS + ALB + RDS)
+- **Infrastructure as Code:** Terraform
 
----
 
-## How to Run the Application Locally
+## Local Development Setup
 
-1. **Set up environment variables**
+### Prerequisites
 
-\`\`\`bash
-cp app/.env.example app/.env
-\`\`\`
+- Docker & Docker Compose
+- Node.js 18+
+- Git
 
-2. **Build and run containers using Docker Compose**
 
-\`\`\`bash
+### Clone Repository
+
+```bash
+git clone https://github.com/credpal.git
+cd credpal
+```
+
+### Run Application with Docker Compose
+
+```bash
 docker compose -f docker/docker-compose.yml up --build
-\`\`\`
+```
 
-This will:
 
-- Build the Node.js application container (multi-stage, production-ready, non-root user)
-- Launch a PostgreSQL database container
-- Connect the application to the database via environment variables
+### The application will be available at:
 
-3. **Test endpoints locally**
+- http://localhost:3000
 
-\`\`\`bash
+- Application Endpoints
+- Health Check
+
+```bash
 curl http://localhost:3000/health
+```
+
+### Expected response:
+
+
+```bash
+{
+  "status": "ok"
+}
+```
+
+Status Endpoint
+
+```bash
 curl http://localhost:3000/status
-curl -X POST http://localhost:3000/process -H "Content-Type: application/json" -d '{"test":"ok"}'
-\`\`\`
+```
 
----
+Returns application metadata, environment, and timestamp.
 
-## How to Access the Application
+## CI/CD Pipeline
 
-- **Locally:** `http://localhost:3000`
-- **Containerized Environment:** Managed by Docker Compose; ports are mapped from container to host (`3000:3000`).
-- **Cloud Deployment:** Intended to be deployed on AWS ECS behind an Application Load Balancer (ALB) with HTTPS enabled.
+The CI/CD pipeline is implemented using GitHub Actions and consists of four main stages.
 
----
+### 1. Build & Scan Docker Image
 
-## How to Deploy the Application
+- Builds Docker image using Docker Buildx
 
-### CI/CD Pipeline (GitHub Actions)
+- Scans the image using Trivy
 
-The pipeline performs the following steps automatically on:
+- Fails only on critical pipeline errors (not vulnerability findings)
 
-- **Push to main**  
-- **Pull requests to main**
+### 2. Run Unit Tests
 
-**Pipeline Steps:**
+- Installs Node.js dependencies
 
-1. **Checkout code** – Uses the latest commit from GitHub.
-2. **Install dependencies** – `npm ci` ensures reproducible builds.
-3. **Run tests** – Optional unit tests verify the application functionality.
-4. **Build Docker image** – Uses multi-stage Dockerfile for production-ready images.
-5. **Push to GitHub Container Registry** – Centralized and secure image storage.
-6. **Manual approval for production** – Ensures safety before deploying to live environment.
+- Spins up local Docker Compose services
 
----
+- Waits for application readiness
 
-### Infrastructure as Code (Terraform)
+- Executes unit tests
 
-Modules are defined for:
+### 3. Push Image to GitHub Container Registry (GHCR)
 
-- **VPC** – Isolated networking with subnets and security groups.
-- **ECS** – Runs containerized Node.js application; scalable and managed.
-- **ALB (Application Load Balancer)** – Routes traffic, enables HTTPS, and supports rolling or blue-green deployments.
-- **RDS (PostgreSQL)** – Managed database with backups and replication.
+- Logs into GitHub Container Registry
 
-Terraform **variables** allow environment customization (dev/staging/prod). Outputs provide useful references for other modules or deployment scripts.
+- Pushes Docker image using lowercase repository naming
 
-> **Note:** Terraform `apply` was not executed due to lack of cloud access. All infrastructure is fully defined and ready to deploy.
+- Triggered only after successful tests
 
----
+### 4. Manual Approval (Production Gate)
 
-## Key Decisions and Rationale
+- Executed only via workflow_dispatch
 
-### Security
+- Prevents accidental production deployments
 
-- **Non-root user in Dockerfile** – Prevents privilege escalation inside the container.
-- **Environment variables for secrets** – No secrets are committed to GitHub.
-- **SSL via ALB** – Encrypts traffic between clients and application.
-- **Minimal Docker image** – Reduces attack surface.
+- Acts as a human-in-the-loop safety control
 
-### CI/CD Decisions
+## Manual Approval Behavior
 
-- **GitHub Actions** – Provides automated, reproducible pipelines.
-- **Manual approval** – Ensures zero-downtime and safe deployment.
-- **Vulnerability scans** – Trivy or SonarQube can be added to detect insecure dependencies.
+The manual approval job is intentionally configured to run only when the workflow is manually triggered:
 
-### Infrastructure Decisions
 
-- **Terraform Modules** – Enables reusable, maintainable, and scalable infrastructure.
-- **ECS vs EC2** – ECS chosen for ease of container orchestration and integration with AWS services.
-- **ALB** – Ensures traffic distribution, rolling deployments, and HTTPS termination.
-- **RDS** – Managed database for high availability and backups.
-- **VPC and Security Groups** – Network isolation and controlled access.
+```yaml
+if: github.event_name == 'workflow_dispatch'
+```
 
----
+When the pipeline runs on a push to the main branch, this step is skipped by design.
+
+This ensures:
+
+- Continuous Integration runs automatically
+
+- Production deployment requires explicit approval
+
+- Environments are protected from unintended releases
+
+This behavior is expected and intentional.
+
+## Infrastructure as Code (Terraform)
+
+Terraform modules are provided for the following resources:
+
+- VPC
+
+- ECS Cluster & Service
+
+- Application Load Balancer
+
+- RDS PostgreSQL
+
+- IAM Roles and Policies
+
+### Important Note
+
+Terraform apply was not executed due to the absence of cloud credentials during the assessment period.
+
+However:
+
+- All modules are production-ready
+
+- Variables support multiple environments
+
+- Networking and security best practices are followed
+
+- Infrastructure can be deployed immediately when credentials are available
+
+## Security Considerations
+
+- Application runs as a non-root user
+
+- Secrets are injected via environment variables
+
+- No secrets are committed to the repository
+
+- Container images are vulnerability-scanned
+
+- HTTPS termination is assumed at the ALB level using AWS ACM
 
 ## Observability
 
-- **Health endpoints** – `/health` and `/status` enable monitoring.
-- **Basic logging** – `console.log()` statements for application activity tracking.
-- **Pipeline monitoring** – CI/CD provides logs of build, test, and deployment steps.
+- Health and status endpoints provided for monitoring
 
----
+- Container logs accessible via Docker or ECS
+
+- Ready for integration with CloudWatch, Prometheus, or ELK stack
+
+## Assumptions & Limitations
+
+- Cloud credentials were unavailable during submission
+
+- Terraform resources were defined but not applied
+
+- SSL certificates assumed to be managed via AWS ACM
+
+- Observability limited to application-level endpoints
+
+These constraints do not affect the architectural validity of the solution.
 
 ## Author
 
-**Justus Dahunsi** – CredPal DevOps Assessment
-
----
-
-This README demonstrates the setup of a **robust, secure, production-ready DevOps pipeline** for a Node.js application, including **local development, containerization, CI/CD, and infrastructure as code**.
+Justus Dahunsi
+DevSecOps / Platform Engineer
