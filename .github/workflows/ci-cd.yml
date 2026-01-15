@@ -12,9 +12,11 @@ jobs:
   # 1️⃣ Build + Scan Docker Image
   # ===============================
   build-and-scan:
+    name: Build and Scan Docker Image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Build Docker image
         uses: docker/build-push-action@v5
@@ -32,18 +34,21 @@ jobs:
           format: table
           vuln-type: os,library
           severity: HIGH,CRITICAL
-          exit-code: 0   # ✅ DO NOT FAIL PIPELINE
+          exit-code: 0   # Non-blocking scan (visibility without failing CI)
 
   # ===============================
   # 2️⃣ Run Tests & Docker Compose
   # ===============================
   test:
+    name: Run Unit Tests and Local Compose
     runs-on: ubuntu-latest
     needs: build-and-scan
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: 18
 
@@ -69,20 +74,22 @@ jobs:
   # 3️⃣ Push Image to GHCR
   # ===============================
   push:
+    name: Push Docker Image to GHCR
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Login to GHCR
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push image
+      - name: Build & Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -94,8 +101,10 @@ jobs:
   # 4️⃣ Manual Approval
   # ===============================
   manual-approval:
+    name: Manual Approval for Production
     runs-on: ubuntu-latest
     needs: push
     if: github.event_name == 'workflow_dispatch'
     steps:
-      - run: echo "Manual approval required"
+      - name: Await approval
+        run: echo "✅ Manual approval required before production deployment."
