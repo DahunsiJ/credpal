@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout code
+      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -33,6 +33,14 @@ jobs:
         run: npm test
         working-directory: ./app
 
+      # Run multi-container environment locally for testing
+      - name: Test Docker Compose locally
+        run: |
+          docker compose -f docker/docker-compose.yml up -d
+          docker compose -f docker/docker-compose.yml ps
+          docker compose -f docker/docker-compose.yml logs --tail=50
+        continue-on-error: true  # Allows workflow to continue even if local test fails
+
       # Build Docker image
       - name: Build Docker image
         uses: docker/build-push-action@v5
@@ -44,10 +52,14 @@ jobs:
 
       # Scan image for vulnerabilities
       - name: Scan Docker image
-        uses: aquasecurity/trivy-action@v2
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: credpal-node-app:latest
           format: table
+
+      # Tear down local Docker Compose test
+      - name: Tear down Docker Compose
+        run: docker compose -f docker/docker-compose.yml down
 
   push-to-registry:
     runs-on: ubuntu-latest
